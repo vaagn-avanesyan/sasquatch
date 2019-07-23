@@ -1,0 +1,79 @@
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+
+//
+// :apps
+//
+
+subprojects {
+    apply plugin: 'com.android.application'
+
+    android {
+
+        buildTypes {
+            release {
+                minifyEnabled false
+                proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            }
+        }
+    }
+
+    /*
+     * Create a project dependency for assembleDebug and assembleRelease tasks with sub projects.
+     * The project doesn't know about assembleDebug and assembleRelease tasks, this is a workaround
+     * until Build beacon supports custom gradle tasks.
+     */
+    tasks.all {
+        if (it.name == 'assembleDebug') {
+            parent.assembleDebug.dependsOn it
+        } else if (it.name == 'assembleRelease') {
+            parent.assembleRelease.dependsOn it
+        }
+    }
+}
+
+// Task to copy a specific APK from sub projects to current project, for App Center build to find it.
+def copyApkToProjectBuildTask(buildType) {
+    Properties properties = new Properties()
+    File file = rootProject.file('local.properties')
+    if (file.exists()) {
+        properties.load(file.newDataInputStream())
+    }
+    def defaultDependency = "jcenter"
+    def dependency = properties.get("dimension.dependency", defaultDependency)
+    if (dependency.isEmpty()) {
+        dependency = defaultDependency
+    }
+    subprojects.each { project ->
+        def apkPath = "${project.buildDir}/outputs/apk/${dependency}DependencyFirebase/${buildType}/${project.name}-${dependency}Dependency-firebase-${buildType}"
+        if ("release" == buildType) {
+            apkPath += "-unsigned"
+        }
+        apkPath += ".apk"
+        copy {
+            from apkPath
+            into "${buildDir}/outputs/apk/"
+        }
+    }
+}
+
+task assembleDebug() {
+    doLast {
+        copyApkToProjectBuildTask('debug')
+    }
+}
+
+task assembleRelease() {
+    doLast {
+        copyApkToProjectBuildTask('release')
+    }
+}
+
+// Empty task with task dependencies.
+task assemble(dependsOn: [assembleDebug, assembleRelease]) {}
+
+task clean() {
+    delete project.buildDir
+}

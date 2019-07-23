@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) Microsoft Corporation. All rights reserved.
+  ~ Licensed under the MIT License.
+  -->
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.microsoft.appcenter.sasquatch">
+
+    <application
+        android:name=".SasquatchApplication"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme"
+        tools:ignore="AllowBackup,GoogleAppIndexingWarning,UnpackedNativeCode"
+        tools:targetApi="n">
+        <activity android:name=".activities.UserInformationActivity" />
+        <activity
+            android:name=".activities.MainActivity"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".activities.CrashActivity"
+            android:label="@string/title_crashes" />
+        <activity android:name=".activities.CrashSubActivity" />
+        <activity android:name=".activities.CrashSubActivity2" />
+        <activity
+            android:name=".activities.DeviceInfoActivity"
+            android:label="@string/title_device_info" />
+        <activity
+            android:name=".activities.EventActivity"
+            android:label="@string/title_event" />
+        <activity
+            android:name=".activities.EventPropertiesActivity"
+            android:label="@string/title_event_properties" />
+        <activity
+            android:name=".activities.PageActivity"
+            android:label="@string/title_page" />
+        <activity
+            android:name=".activities.DummyActivity"
+            android:label="@string/title_generate_page_log" />
+        <activity
+            android:name=".activities.SettingsActivity"
+            android:label="@string/settings" />
+        <activity
+            android:name=".activities.ManagedErrorActivity"
+            android:label="@string/title_error" />
+        <activity
+            android:name=".activities.CustomPropertiesActivity"
+            android:label="@string/title_custom_properties" />
+        <activity
+            android:name=".activities.CommonSchemaPropertiesActivity"
+            android:label="@string/cs_properties_title" />
+        <activity
+            android:name=".activities.AuthenticationProviderActivity"
+            android:label="@string/title_auth" />
+        <activity
+            android:name=".activities.DataActivity"
+            android:label="@string/title_data" />
+        <activity
+            android:name=".activities.NewUserDocumentActivity"
+            android:label="@string/new_user_document_title" />
+        <activity
+            android:name=".activities.DocumentDetailActivity"
+            android:label="@string/app_document_detail_title" />
+        <activity
+            android:name=".activities.MSALoginActivity"
+            android:label="@string/msa_title" />
+        <activity android:name="com.microsoft.identity.client.BrowserTabActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="auth"
+                    android:scheme="@string/msal_redirect_scheme" />
+            </intent-filter>
+        </activity>
+
+        <!-- Set default notification icon and color. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_appcenter_logo" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/appcenter_logo" />
+    </application>
+
+</manifest>

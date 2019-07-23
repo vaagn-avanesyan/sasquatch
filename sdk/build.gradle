@@ -1,0 +1,263 @@
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+
+//
+// :sdk
+//
+
+allprojects {
+    apply plugin: 'jacoco'
+
+    jacoco {
+        toolVersion '0.7.9'
+    }
+    tasks.withType(Test) {
+        jacoco.includeNoLocationClasses = true
+    }
+
+    //noinspection GroovyAssignabilityCheck
+    group rootProject.ext.groupId
+    //noinspection GroovyAssignabilityCheck
+    version rootProject.ext.versionName
+}
+
+subprojects {
+    apply plugin: 'com.android.library'
+    apply plugin: 'com.jfrog.bintray'
+    apply plugin: 'com.github.dcendents.android-maven'
+
+    def ext = rootProject.ext
+
+    ext.sdkName = 'appcenter.android'
+
+    android {
+
+        defaultConfig {
+            consumerProguardFiles 'proguard-rules.pro'
+
+            buildConfigField 'int', "MIN_SDK_VERSION", "${ext.minSdkVersion}"
+            buildConfigField 'int', "TARGET_SDK_VERSION", "${ext.targetSdkVersion}"
+        }
+
+        buildTypes {
+            release {
+                buildConfigField 'String', "SDK_NAME", "\"${ext.sdkName}\""
+                minifyEnabled false
+            }
+            debug {
+                buildConfigField 'String', "SDK_NAME", "\"${ext.sdkName}\""
+                testCoverageEnabled true
+            }
+        }
+
+        testOptions {
+            unitTests {
+                all {
+                    jvmArgs '-noverify'
+                }
+                returnDefaultValues = true
+            }
+        }
+
+        lintOptions {
+            explainIssues true
+            textReport true
+        }
+    }
+
+    configurations {
+        javadocDeps
+    }
+
+    dependencies {
+        compileOnly "com.android.support:support-annotations:${ext.supportLibVersion}"
+        javadocDeps "com.android.support:support-annotations:${ext.supportLibVersion}"
+        configurations.all {
+            resolutionStrategy {
+                force "com.android.support:support-annotations:${ext.supportLibVersion}"
+            }
+        }
+
+        testImplementation 'org.powermock:powermock-api-mockito:1.6.5'
+        testImplementation 'org.powermock:powermock-module-junit4:1.6.5'
+        testImplementation 'org.powermock:powermock-module-junit4-rule-agent:1.6.5'
+        testImplementation "com.android.support:support-annotations:${ext.supportLibVersion}"
+        testImplementation project(':test')
+
+        androidTestImplementation 'com.crittercism.dexmaker:dexmaker-dx:1.4'
+        androidTestImplementation 'com.crittercism.dexmaker:dexmaker-mockito:1.4'
+        androidTestImplementation 'com.android.support.test:runner:1.0.2'
+        androidTestImplementation 'com.android.support.test:rules:1.0.2'
+        androidTestImplementation ("com.android.support:support-annotations:${ext.supportLibVersion}") {
+            force = true
+        }
+        androidTestImplementation project(':test')
+    }
+
+    task coverageReport(type: JacocoReport, dependsOn: ['createDebugCoverageReport', 'testDebugUnitTest']) {
+        reports {
+            xml.enabled = true
+            html.enabled = true
+        }
+
+        def fileFilter = ['**/R.class', '**/R$*.class', '**/BuildConfig.*', '**/Manifest*.*', '**/*Test*.*', 'android/**/*.*']
+        sourceDirectories.from = files(["$projectDir/src/main/java"])
+        classDirectories.from = files([
+                fileTree(dir: "$buildDir/intermediates/classes/debug", excludes: fileFilter),
+                fileTree(dir: "$buildDir/intermediates/javac/debug/compileDebugJavaWithJavac/classes", excludes: fileFilter)
+        ])
+        executionData.from = fileTree(dir: buildDir, includes: [
+                'jacoco/testDebugUnitTest.exec',
+                'outputs/code_coverage/debugAndroidTest/connected/*coverage.ec'
+        ])
+    }
+
+    task sourcesJar(type: Jar) {
+        afterEvaluate {
+            from android.sourceSets.main.java.srcDirs
+            classifier = 'sources'
+        }
+    }
+
+    task javadoc(type: Javadoc) {
+        afterEvaluate {
+            source = android.sourceSets.main.java.srcDirs
+            classpath += configurations.javadocDeps
+            configurations.api.dependencies.withType(ProjectDependency).dependencyProject.buildDir.each { dir -> classpath += files("${dir}/intermediates/classes/release") }
+            //noinspection GroovyAssignabilityCheck
+            classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+            android.libraryVariants.all { variant ->
+                if (variant.name == 'release') {
+                    owner.classpath += variant.javaCompile.classpath
+                }
+            }
+            javadoc.dependsOn project.assembleRelease
+        }
+    }
+
+    task javadocJar(type: Jar, dependsOn: javadoc) {
+        classifier = 'javadoc'
+        //noinspection GroovyAccessibility
+        from javadoc.destinationDir
+    }
+
+    // This workaround is required only when using "org.gradle.configureondemand: true"
+    bintrayUpload.dependsOn tasks.install
+
+    artifacts {
+        archives javadocJar
+        archives sourcesJar
+    }
+
+    bintray {
+        user = ext.bintrayUser
+        key = ext.bintrayKey
+
+        configurations = ['archives']
+
+        publish = true
+
+        pkg {
+            repo = ext.bintrayRepo
+            name = project.name
+            userOrg = ext.bintrayUserOrg
+            websiteUrl = ext.siteUrl
+            vcsUrl = ext.gitUrl
+            licenses = [ext.licenseCode]
+        }
+    }
+
+    //noinspection GroovyMissingReturnStatement
+    install {
+        afterEvaluate {
+            repositories.mavenInstaller {
+                pom {
+                    //noinspection GroovyAssignabilityCheck
+                    project {
+                        packaging 'aar'
+
+                        //noinspection GroovyAssignabilityCheck
+                        name project.name
+                        description = project.description
+                        url = ext.siteUrl
+
+                        licenses {
+                            license {
+                                //noinspection GroovyAssignabilityCheck
+                                name ext.licenseName
+                                url ext.licenseSite
+                            }
+                        }
+                        developers {
+                            developer {
+                                id ext.developerId
+                                //noinspection GroovyAssignabilityCheck
+                                name ext.developerName
+                                email ext.developerEmail
+                            }
+                        }
+                        scm {
+                            connection ext.gitUrl
+                            developerConnection ext.gitUrl
+                            url ext.siteUrl
+                        }
+                    }
+                    whenConfigured { generatedPom ->
+
+                        // Eliminate test-scoped dependencies (no need in maven central poms).
+                        generatedPom.dependencies.removeAll { dep ->
+                            dep.scope == 'test'
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// :sdk:coverageReport which combines all coverageReports generated by sub projects
+task coverageReport(type: JacocoReport, dependsOn: subprojects.coverageReport) {
+    reports {
+        xml.enabled = true
+        html.enabled = true
+    }
+
+    def coverageReports = subprojects.coverageReport.findAll { !it.project.name.contains("rum") }
+
+    //noinspection GroovyAssignabilityCheck
+    sourceDirectories.from = files(coverageReports.sourceDirectories)
+    //noinspection GroovyAssignabilityCheck
+    classDirectories.from = files(coverageReports.classDirectories)
+    //noinspection GroovyAssignabilityCheck
+    executionData.from = files(coverageReports.executionData)
+}
+
+apply plugin: 'com.github.kt3k.coveralls'
+
+coveralls {
+    jacocoReportPath "$buildDir/reports/jacoco/coverageReport/coverageReport.xml"
+    sourceDirs = files(subprojects.coverageReport.sourceDirectories).files.absolutePath
+}
+
+tasks.coveralls.dependsOn coverageReport
+
+task javadoc(type: Javadoc, dependsOn: subprojects.javadoc) {
+    // Do nothing for :sdk but run the task for its children.
+}
+
+// Since Android Studio 2.2.0 we can't use sub project assembleRelease task dependency before the sub project evaluation
+configure(subprojects.findAll { it.subprojects.isEmpty() }) {
+    afterEvaluate {
+        bintrayUpload.dependsOn assembleRelease
+    }
+}
+
+task bintrayUpload(dependsOn: [subprojects.bintrayUpload]) {
+    // Do nothing for :sdk but run the task for its children.
+}
+
+task clean(type: Delete) {
+    delete project.buildDir
+}

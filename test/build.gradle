@@ -1,0 +1,18 @@
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License.
+ */
+
+apply plugin: 'com.android.library'
+
+android {
+
+    //noinspection GroovyMissingReturnStatement
+    lintOptions {
+        disable 'InvalidPackage'
+    }
+}
+
+dependencies {
+    implementation 'junit:junit:4.12'
+}
